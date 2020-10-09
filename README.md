@@ -24,7 +24,7 @@ glxinfo | grep OpenGL
 # OpenGL version string: 4.6 (Compatibility Profile) Mesa 20.0.8
 # OpenGL shading language version string: 4.60
 ```
-- Download and Install (Freeglut)[http://freeglut.sourceforge.net/index.php#download]
+- Download and Install [Freeglut](http://freeglut.sourceforge.net/index.php#download)
 
 - More Information see [OpenGL Programming Wikibook](https://en.wikibooks.org/wiki/OpenGL_Programming/Installation/Linux) 
 
