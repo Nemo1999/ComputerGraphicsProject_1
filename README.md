@@ -1,8 +1,8 @@
-## ComputerGraphicsProject_1
+# ComputerGraphicsProject_1
 This is a  project for a Computer Graphics course in NCTU
 
 
-# Build Environment : 
+### Build Environment : 
 
 - OS: Ubuntu 20.04.1 LTS
 
