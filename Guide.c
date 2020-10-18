@@ -1,6 +1,7 @@
 #include <GL/glew.h> // include GLEW and new version of GL on Windows
 #include <GLFW/glfw3.h> // GLFW helper library
 #include <stdio.h>
+#include <stdlib.h>
 #include <math.h>
 #include <time.h>
 #include <stdarg.h>
@@ -15,11 +16,13 @@ bool restart_gl_log ();
 bool gl_log_err (const char* message, ...);
 void glfw_error_callback (int error, const char* description);
 void log_gl_params ();
-void _print_shader_info_log (GLuint shader_index);
+void _prin_shader_info_log (GLuint shader_index);
 void _print_programme_info_log (GLuint programme);
 void print_all (GLuint programme);
 const char* GL_type_to_string (GLenum type);  
 bool is_valid (GLuint programme);
+GLuint loadShader(char* filename,GLenum shaderType);
+GLuint linkShaders(GLuint* shaders , unsigned short num);
 
 // reported window size may be good to know for a few things
 int g_win_width = 640;
@@ -95,36 +98,55 @@ int main () {
   glEnable (GL_DEPTH_TEST); // enable depth-testing
   glDepthFunc (GL_LESS); // depth-testing interprets a smaller value as "closer"
   /* OTHER STUFF GOES HERE NEXT */
-  GLfloat points[]={
-		    -0.5f  ,0.5f  , 0.0f,
-		    -0.5f ,-0.5f , 0.0f,
-		    0.5f  ,-0.5f , 0.0f,
-		    0.5f  ,-0.5f , 0.0f,
-		    0.5f  ,0.5f  , 0.0f,
-		    -0.5f , 0.5f  ,0.0f
-		    
-  };
 
-  GLfloat points_circ[CIRC_RES*3];
+
+  
+  GLfloat points_col [(CIRC_RES+1)*3];
+  // points on  the circle has index 0 ~ CIRC_RES-1 
+  for(int i=0;i<CIRC_RES;i++){
+    points_col[i*3] = 0.5+0.5*cos((2.0 * PI * i )/ CIRC_RES);
+    points_col[i*3+1] = 0.5+0.5*sin((2.0 * PI * i )/ CIRC_RES);
+    points_col[i*3+2] = 0.5f;
+  }
+  //center of the circle has index CIRC_RES
+  points_col[CIRC_RES*3] = 0.5f;
+  points_col[CIRC_RES*3+1] = 0.5f;
+  points_col[CIRC_RES*3+2] = 0.5f;
+ 
+  GLfloat points_circ[(CIRC_RES+1)*3];
+  // points on  the circle has index 0 ~ CIRC_RES-1 
   for(int i=0;i<CIRC_RES;i++){
     points_circ[i*3] = 0.5*cos((2.0 * PI * i )/ CIRC_RES);
     points_circ[i*3+1] = 0.5*sin((2.0 * PI * i )/ CIRC_RES);
     points_circ[i*3+2] = 0.0f;
   }
+  //center of the circle has index CIRC_RES
+  points_circ[CIRC_RES*3] = 0.0f;
+  points_circ[CIRC_RES*3+1] = 0.0f;
+  points_circ[CIRC_RES*3+2] = 0.0f;
 
+  GLushort indices_circ[(CIRC_RES+1)*2];
+  for(unsigned short i=0;i<=CIRC_RES;i++){
+    indices_circ[2*i] = CIRC_RES;
+    indices_circ[2*i+1] = (i==CIRC_RES) ? 0 : i ;
+  }
   
 
-  
-  /* GLuint vbo = 0; */
-  /* glGenBuffers (1,&vbo); */
-  /* glBindBuffer(GL_ARRAY_BUFFER,vbo); */
-  /* glBufferData(GL_ARRAY_BUFFER, sizeof(points),points,GL_STATIC_DRAW); */
 
+  GLuint vbo_col = 0;
+  glGenBuffers (1,&vbo_col);
+  glBindBuffer(GL_ARRAY_BUFFER,vbo_col);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(points_col),points_col,GL_STATIC_DRAW);
+  
   GLuint vbo_circ = 0;
   glGenBuffers (1,&vbo_circ);
   glBindBuffer(GL_ARRAY_BUFFER,vbo_circ);
   glBufferData(GL_ARRAY_BUFFER, sizeof(points_circ),points_circ,GL_STATIC_DRAW);
-  
+
+  GLuint vbo_ind = 0;
+  glGenBuffers (1,&vbo_ind);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,vbo_ind);
+  glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices_circ),indices_circ,GL_STATIC_DRAW);
   /* GLuint vao = 0; */
   /* glGenVertexArrays (1, &vao); */
   /* glBindVertexArray (vao); */
@@ -135,64 +157,39 @@ int main () {
   GLuint vao_circ = 0;
   glGenVertexArrays (1, &vao_circ);
   glBindVertexArray (vao_circ);
-  glEnableVertexAttribArray (0);
+
+  glEnableVertexAttribArray (0);//set layout (location = 0) in vertex shader 
   glBindBuffer (GL_ARRAY_BUFFER, vbo_circ);
   glVertexAttribPointer (0, 3, GL_FLOAT, GL_FALSE, 0, NULL);
-  const char* vertex_shader =
-    "#version 410\n"
-    "in vec3 vp;"
-    "void main () {"
-    " gl_Position = vec4 (vp, 1.0);"
-    "}";
-
-  const char* fragment_shader =
-    "#version 410\n"
-    "out vec4 frag_colour;"
-    "void main () {"
-    " frag_colour = vec4 (0.5, 0.0, 0.5, 1.0);"
-    "}";
-
-  GLuint vs = glCreateShader (GL_VERTEX_SHADER);
-  glShaderSource (vs, 1, &vertex_shader, NULL);
-  glCompileShader (vs);
   
-  // check for compile errors
-  int params = -1;
-  glGetShaderiv (vs, GL_COMPILE_STATUS, &params);
-  if (GL_TRUE != params) {
-    fprintf (stderr, "ERROR: GL shader index %i did not compile\n", vs);
-    _print_shader_info_log (vs);
-    return false; // or exit or something
-  }
+  glEnableVertexAttribArray (1);//set layout (location = 1) in vertex shader 
+  glBindBuffer (GL_ARRAY_BUFFER, vbo_col);
+  glVertexAttribPointer (1, 3, GL_FLOAT, GL_FALSE, 0, NULL);
   
-  GLuint fs = glCreateShader (GL_FRAGMENT_SHADER);
-  glShaderSource (fs, 1, &fragment_shader, NULL);
-  glCompileShader (fs);
-  params = -1;
-  glGetShaderiv (fs, GL_COMPILE_STATUS, &params);
-  if (GL_TRUE != params) {
-    fprintf (stderr, "ERROR: GL shader index %i did not compile\n", fs);
-    _print_shader_info_log (fs);
-    return false; // or exit or something
-  }
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo_ind);
+  //the following line is not needed for indexed buffer
+  //glVertexAttribPointer (0, 1, GL_UNSIGNED_SHORT, GL_FALSE, 0, NULL);
 
-  GLuint shader_programme = glCreateProgram ();
-  glAttachShader (shader_programme, fs);
-  glAttachShader (shader_programme, vs);
-  glLinkProgram (shader_programme);
-  // check if link was successful
-  params = -1;
-  glGetProgramiv (shader_programme, GL_LINK_STATUS, &params);
-  if (GL_TRUE != params) {
-    fprintf (stderr, "ERROR: could not link shader programme GL index %u\n",shader_programme);
-    _print_programme_info_log (shader_programme);
-    return false;
-  }
-  //validate shaders
-  is_valid(shader_programme);  
+  //unbind the VAO
+  glBindVertexArray(0);
+  //unbind buffers to check that VAO work fine
+  glBindBuffer(GL_ARRAY_BUFFER,0);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,0);
 
+  // open vertex shader
+  GLuint vs = loadShader("shader.vert",GL_VERTEX_SHADER);
+  // open fragment shader
+  GLuint fs = loadShader("shader.frag",GL_FRAGMENT_SHADER);
+  // link shaders
+  GLuint shaders[2] = {vs,fs};
 
- 
+  GLuint shader_programme = linkShaders(shaders,2);
+
+  //glUseProgram (shader_programme);
+  // get the unique location of the variable called " inputColour "
+  int uniform_location = glGetUniformLocation(shader_programme,"input_colour");
+  //printf("uniform location = %d",uniform_location);
+    
   glClearColor(0.6f,0.6f,0.8f,1.0f);
   while (!glfwWindowShouldClose (window)) {
     _update_fps_counter(window);
@@ -200,9 +197,17 @@ int main () {
     glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glViewport (0, 0, g_fb_width, g_fb_height);
     glUseProgram (shader_programme);
+    glUniform3f (uniform_location, 1.0f,1.0f,1.0f);
+
+    //print_all(shader_programme);
+    
+    if(GLFW_PRESS == glfwGetKey (window, GLFW_KEY_K)){
+      // assign an initial colour to your fragment
+      glUniform3f (uniform_location, 0.0f,0.0f,0.0f);
+    }
     glBindVertexArray (vao_circ);
     // draw points 0-3 from the currently bound VAO with current in-use shader
-    glDrawArrays (GL_LINE_STRIP, 0,CIRC_RES);
+    glDrawElements (GL_TRIANGLE_STRIP, (CIRC_RES+1)*2,GL_UNSIGNED_SHORT,NULL);
     // update other events like input handling
     glfwPollEvents ();
     // put the stuff we've been drawing onto the display
@@ -211,6 +216,17 @@ int main () {
     if (GLFW_PRESS == glfwGetKey (window, GLFW_KEY_ESCAPE)) {
       glfwSetWindowShouldClose (window, 1);
     }
+    
+    if (GLFW_PRESS == glfwGetKey (window, GLFW_KEY_R)) {
+      vs = loadShader("shader.vert",GL_VERTEX_SHADER);
+      // open fragment shader
+      fs = loadShader("shader.frag",GL_FRAGMENT_SHADER);
+      // link shaders
+      shaders[0] = vs; shaders[1]=fs;
+      shader_programme = linkShaders(shaders,2);
+      uniform_location = glGetUniformLocation(shader_programme,"input_colour");
+    }
+    
   }
   
 
@@ -438,4 +454,49 @@ bool is_valid (GLuint programme) {
       return false;
     }
     return true;
+}
+
+GLuint loadShader(char* filename,GLenum shader_type){
+  // open vertex shader
+  FILE * file  = fopen( filename , "r"); // read only
+  if (file==NULL) {fprintf(stderr,"cannot open %s",filename); exit (1);}
+  fseek(file, 0, SEEK_END);
+  long fsize = ftell(file);
+  fseek(file, 0, SEEK_SET);  /* same as rewind(f); */
+  char *source = malloc(fsize + 1);
+  fread(source, 1, fsize, file);
+  source[fsize] = 0;
+  GLuint shader = glCreateShader (shader_type);
+  glShaderSource (shader, 1, &source, NULL);
+  glCompileShader (shader);
+  // check for compile errors
+  int params = -1;
+  glGetShaderiv (shader, GL_COMPILE_STATUS, &params);
+  if (GL_TRUE != params) {
+    fprintf (stderr, "ERROR: GL shader index %i did not compile\n", shader);
+    _print_shader_info_log (shader);
+    exit(1); // or exit or something
+  }
+  fclose(file);
+  free(source);
+  return shader;
+}
+
+
+GLuint linkShaders(GLuint* shaders , unsigned short num){
+  GLuint shader_programme = glCreateProgram ();
+  for(unsigned short i=0;i<num;i++)
+    glAttachShader (shader_programme,shaders[i]);
+  glLinkProgram (shader_programme);
+  // check if link was successful
+  int params = -1;
+  glGetProgramiv (shader_programme, GL_LINK_STATUS, &params);
+  if (GL_TRUE != params) {
+    fprintf (stderr, "ERROR: could not link shader programme GL index %u\n",shader_programme);
+    _print_programme_info_log (shader_programme);
+    return false;
+  }
+  //validate shaders
+  if(is_valid(shader_programme)) return shader_programme;  
+
 }
