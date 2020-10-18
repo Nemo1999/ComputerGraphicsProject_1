@@ -52,8 +52,9 @@ int frame_count;
 /* we will use this function to update the window title with a frame rate */
 void _update_fps_counter (GLFWwindow* window);
 
+
 int main () {
-  fshowmat4(stdout,matmult4(translate4(0.5,0.0,0.0),translate4(0.5,0.0,0.0)));
+  
   
   if (!restart_gl_log ()) { /* quit? */ }
   // start GL context and O/S window using the GLFW helper library
@@ -191,24 +192,49 @@ int main () {
 
   //glUseProgram (shader_programme);
   // get the unique location of the variable called " inputColour "
-  int uniform_location = glGetUniformLocation(shader_programme,"input_colour");
+  int uniform_mat_location = glGetUniformLocation(shader_programme,"translate_mat");
   //printf("uniform location = %d",uniform_location);
-    
+
+  float x = 0.0f;
+  float y = 0.0f;
+  float z = 0.0f;
+  double time0 = glfwGetTime();
+  double time1 , period;
+  
   glClearColor(0.6f,0.6f,0.8f,1.0f);
   while (!glfwWindowShouldClose (window)) {
     _update_fps_counter(window);
+    time1 = glfwGetTime();
+    period = time1-time0;
+    time0 = time1;
     // wipe the drawing surface clear
     glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glViewport (0, 0, g_fb_width, g_fb_height);
     glUseProgram (shader_programme);
-    glUniform3f (uniform_location, 1.0f,1.0f,1.0f);
-
+    glUniformMatrix4fv(uniform_mat_location ,1, GL_TRUE, (translate4(x,y,z)).m);
+    
     //print_all(shader_programme);
     
-    if(GLFW_PRESS == glfwGetKey (window, GLFW_KEY_K)){
-      // assign an initial colour to your fragment
-      glUniform3f (uniform_location, 0.0f,0.0f,0.0f);
+    if(GLFW_PRESS == glfwGetKey (window, GLFW_KEY_UP)){
+      y+= period * 0.3 ;
     }
+    if(GLFW_PRESS == glfwGetKey (window, GLFW_KEY_DOWN)){
+      y-= period * 0.3 ;
+    }
+    if(GLFW_PRESS == glfwGetKey (window, GLFW_KEY_RIGHT)){
+      x+= period * 0.3 ;
+    }
+    if(GLFW_PRESS == glfwGetKey (window, GLFW_KEY_LEFT)){
+      x-= period * 0.3 ;
+    }
+    if(GLFW_PRESS == glfwGetKey (window, GLFW_KEY_N)){
+      z+= period * 0.3 ;
+    }
+    if(GLFW_PRESS == glfwGetKey (window, GLFW_KEY_F)){
+      z-= period * 0.3 ;
+    }
+    
+    
     glBindVertexArray (vao_circ);
     // draw points 0-3 from the currently bound VAO with current in-use shader
     glDrawElements (GL_TRIANGLE_STRIP, (CIRC_RES+1)*2,GL_UNSIGNED_SHORT,NULL);
@@ -228,7 +254,7 @@ int main () {
       // link shaders
       shaders[0] = vs; shaders[1]=fs;
       shader_programme = linkShaders(shaders,2);
-      uniform_location = glGetUniformLocation(shader_programme,"input_colour");
+      uniform_mat_location = glGetUniformLocation(shader_programme,"translate_mat");
     }
     
   }
