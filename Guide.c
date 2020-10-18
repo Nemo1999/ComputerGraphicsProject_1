@@ -6,10 +6,12 @@
 #include <time.h>
 #include <stdarg.h>
 #include <stdbool.h>
+#include "LinAlg.h"
 
 #define GL_LOG_FILE "gl.log"
 #define PI 3.1416f
 #define CIRC_RES 30
+
 
 bool gl_log (const char* message, ...);
 bool restart_gl_log ();
@@ -51,6 +53,8 @@ int frame_count;
 void _update_fps_counter (GLFWwindow* window);
 
 int main () {
+  fshowmat4(stdout,matmult4(translate4(0.5,0.0,0.0),translate4(0.5,0.0,0.0)));
+  
   if (!restart_gl_log ()) { /* quit? */ }
   // start GL context and O/S window using the GLFW helper library
   gl_log ("starting GLFW\n%s\n", glfwGetVersionString ());

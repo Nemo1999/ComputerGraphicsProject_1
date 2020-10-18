@@ -1,0 +1,75 @@
+// This is written by nemo for CG project 1
+// Contains some linear algebra utilities 
+
+
+// Matrixes and vectors are represented in "row-major" for visual conveniece
+// Remember to use the transpose option when sending them into GLuniform.
+
+// we use pass-by value for simplicity (which enables nested function application).
+#include<stdio.h>
+#include<stdlib.h>
+#ifndef _LIN_ALG_
+#define _LIN_ALG_
+
+
+typedef struct vec4{
+  float v[4];
+} vec4;
+
+typedef struct mat4{
+  float m[16];
+} mat4;
+
+typedef struct vec3{
+  float v[3];
+} vec3;
+
+typedef struct mat3{
+  float m[9];
+} mat3;
+
+
+
+
+mat4 translate4(float dx, float dy, float dz){
+  mat4 ans =    { .m={ 1.0 , 0.0 , 0.0 , dx ,
+		       0.0 , 1.0 , 0.0 , dy ,
+		       0.0 , 0.0 , 1.0 , dz ,
+		       0.0 , 0.0 , 0.0 , 1.0  }
+  };
+  return ans;
+}
+
+mat4 matmult4(mat4 A , mat4 B){
+  mat4 ans;
+  for(short i=0;i<4;i++)
+    for(short j=0;j<4;j++){
+      float ind = 0;
+      for(short k=0;k<4;k++)
+	ind += A.m[i*4+k] * B.m[j+4*k];
+      ans.m[i*4+j]=ind;
+    }
+  return ans;
+}
+
+vec4 matapp4(mat4 A , vec4 v){
+  vec4 ans;
+  for(short i=0;i<4;i++){
+    float ind = 0;
+    for(short k=0;k<4;k++)
+      ind += A.m[4*i+k] * v.v[k];
+    ans.v[i] = ind;
+  }
+  return ans;
+}  
+
+void fshowmat4(FILE* file, mat4 A){
+  for(short i=0;i<16;i+=4)
+    fprintf(file,"\t%3f\t%3f\t%3f\t%3f\n",A.m[i],A.m[i+1],A.m[i+2],A.m[i+3]);
+}
+
+void fshowvec4(FILE* file, vec4 v){
+  for(short i=0;i<4;i++)
+    fprintf(file,"\t%3f\n",v.v[i]);
+}
+#endif
