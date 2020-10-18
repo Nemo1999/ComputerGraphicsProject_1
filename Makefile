@@ -6,6 +6,7 @@ LDLIBS=-lGLEW -lglfw -lGL -lm
 
 #EXTRA_LDLIBS?=-lGL
 all: Guide
+	./Guide
 
 Guide: shader.vert shader.frag Guide.c
 	gcc Guide.c ${LDLIBS} -o Guide
