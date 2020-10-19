@@ -1,5 +1,6 @@
 #include <GL/glew.h> // include GLEW and new version of GL on Windows
 #include <GLFW/glfw3.h> // GLFW helper library
+//#include <GLUT/glut.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -25,32 +26,68 @@ const char* GL_type_to_string (GLenum type);
 bool is_valid (GLuint programme);
 GLuint loadShader(char* filename,GLenum shaderType);
 GLuint linkShaders(GLuint* shaders , unsigned short num);
+void _update_fps_counter (GLFWwindow* window);
+
 
 // reported window size may be good to know for a few things
 int g_win_width = 640;
 int g_win_height = 480;
+
 // keep track of framebuffer size for things like the viewport and the mouse cursor
 int g_fb_width = 640;
 int g_fb_height = 480;
+float aspect_ratio = 640.0/480.0;
+
+float camera_ori[3] = {0.0f,0.0f,0.0f};  
+float prev_camera_ori[3] = {0.0f,0.0f,0.0f};  
+double previous_seconds;
+int frame_count;
+double mouse_x_before_press;
+double mouse_y_before_press;
+bool mouse_is_down = 0;
+/* we will use this function to update the window title with a frame rate */
+
+
 
 
 void glfw_window_size_callback (GLFWwindow* window, int width, int height) {
   g_win_width = width;
   g_win_height = height;
+  aspect_ratio = (float) g_fb_width / (float)g_fb_height;
   gl_log("window_size changed to %dx%d\n" , width,height);
 		       
 }
 void glfw_framebuffer_resize_callback (GLFWwindow* window, int width, int height) {
   g_fb_width = width;
   g_fb_height = height;
+  aspect_ratio = (float) g_fb_width / (float)g_fb_height;
   gl_log("framebuffer_size changed to %dx%d\n", width , height);
   /* later update any perspective matrices used here */
 }
 
-double previous_seconds;
-int frame_count;
-/* we will use this function to update the window title with a frame rate */
-void _update_fps_counter (GLFWwindow* window);
+void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
+{
+  if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS){
+    glfwGetCursorPos(window, &mouse_x_before_press, &mouse_y_before_press);
+    mouse_is_down = 1;
+  }
+  else if(button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE){
+    mouse_is_down = 0;
+  }
+}
+
+static void cursor_position_callback(GLFWwindow* window, double xpos, double ypos)
+{
+  if (mouse_is_down)
+    {
+      camera_ori[1] = prev_camera_ori[1] + PI*(xpos - mouse_x_before_press)/g_fb_width;
+      camera_ori[0] = prev_camera_ori[0] + PI*(ypos - mouse_y_before_press)/g_fb_height;
+    }
+  else{
+    prev_camera_ori[1] = camera_ori[1];
+    prev_camera_ori[0] = camera_ori[0];
+  }
+}
 
 
 int main () {
@@ -86,7 +123,8 @@ int main () {
   }
   glfwSetWindowSizeCallback (window, glfw_window_size_callback);
   glfwSetFramebufferSizeCallback (window, glfw_framebuffer_resize_callback);
-  
+  glfwSetMouseButtonCallback(window, mouse_button_callback);
+  glfwSetCursorPosCallback(window, cursor_position_callback);
   
   glfwMakeContextCurrent (window);
   // start GLEW extension handler
@@ -192,12 +230,20 @@ int main () {
 
   //glUseProgram (shader_programme);
   // get the unique location of the variable called " inputColour "
-  int uniform_mat_location = glGetUniformLocation(shader_programme,"translate_mat");
+  int model_mat_location = glGetUniformLocation(shader_programme,"model_mat");
+  int view_mat_location = glGetUniformLocation(shader_programme,"view_mat");
+  int project_mat_location = glGetUniformLocation(shader_programme,"project_mat");
   //printf("uniform location = %d",uniform_location);
 
-  float x = 0.0f;
-  float y = 0.0f;
-  float z = 0.0f;
+  float field_of_view = 67.0f;
+  float near_plane_z = 0.1;
+  float far_plane_z = 100;
+    
+  float circ_pos[3] = {0.0f,0.0f,0.0f};
+  float circ_ori[3] = {0.0f,0.0f,0.0f};
+  float camera_pos[3] = {0.0f , 0.0f , 2.0f };
+  // camera_ori is moved to global;
+  
   double time0 = glfwGetTime();
   double time1 , period;
   
@@ -211,28 +257,79 @@ int main () {
     glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glViewport (0, 0, g_fb_width, g_fb_height);
     glUseProgram (shader_programme);
-    glUniformMatrix4fv(uniform_mat_location ,1, GL_TRUE, (translate4(x,y,z)).m);
+    glUniformMatrix4fv(model_mat_location ,1, GL_TRUE, (matmult4(translate4v(circ_pos),rotate4v(circ_ori))).m);
+    glUniformMatrix4fv(view_mat_location,
+		       1,
+		       GL_TRUE,
+		       (matmult4(
+				 rotate4(
+					 -camera_ori[0],
+					 -camera_ori[1],
+					 -camera_ori[2]),
+				 translate4(
+					    -camera_pos[0],
+					    -camera_pos[1],
+					    -camera_pos[2])
+				 )
+			).m
+		       );
+							     
+    glUniformMatrix4fv(project_mat_location,1,GL_TRUE,project4(field_of_view,aspect_ratio,near_plane_z,far_plane_z).m);
     
+    //gluLookAt(x,y,z+0.5,0,0,0,0,1,0);
     //print_all(shader_programme);
+
+
+    circ_ori[2] = time1;
     
     if(GLFW_PRESS == glfwGetKey (window, GLFW_KEY_UP)){
-      y+= period * 0.3 ;
+      circ_pos[1]+= period * 0.3 ;
     }
     if(GLFW_PRESS == glfwGetKey (window, GLFW_KEY_DOWN)){
-      y-= period * 0.3 ;
+      circ_pos[1]-= period * 0.3 ;
     }
     if(GLFW_PRESS == glfwGetKey (window, GLFW_KEY_RIGHT)){
-      x+= period * 0.3 ;
+      circ_pos[0]+= period * 0.3 ;
     }
     if(GLFW_PRESS == glfwGetKey (window, GLFW_KEY_LEFT)){
-      x-= period * 0.3 ;
+      circ_pos[0]-= period * 0.3 ;
     }
     if(GLFW_PRESS == glfwGetKey (window, GLFW_KEY_N)){
-      z+= period * 0.3 ;
+      circ_pos[1]+= period * 0.3 ;
     }
     if(GLFW_PRESS == glfwGetKey (window, GLFW_KEY_F)){
-      z-= period * 0.3 ;
+      circ_pos[1]-= period * 0.3 ;
     }
+
+    if(GLFW_PRESS == glfwGetKey (window, GLFW_KEY_W)){
+      vec4 f = {.v={0.0,0.0,-1.0,0.0}};
+      vec4 foward = matapp4(rotate4v(camera_ori),f);
+      camera_pos[0] += period * foward.v[0] * 0.5 ;
+      camera_pos[1] += period * foward.v[1] * 0.5 ;
+      camera_pos[2] += period * foward.v[2] * 0.5 ;
+    }
+    if(GLFW_PRESS == glfwGetKey (window, GLFW_KEY_X)){
+      vec4 b = {.v={0.0,0.0,1.0,0.0}};
+      vec4 backward = matapp4(rotate4v(camera_ori),b);
+      camera_pos[0] += period * backward.v[0] * 0.5 ;
+      camera_pos[1] += period * backward.v[1] * 0.5 ;
+      camera_pos[2] += period * backward.v[2] * 0.5 ;
+    }
+    if(GLFW_PRESS == glfwGetKey (window, GLFW_KEY_A)){
+      vec4 l = {.v={-1.0,0.0,0.0,0.0}};
+      vec4 leftward = matapp4(rotate4v(camera_ori),l);
+      camera_pos[0] += period * leftward.v[0] * 0.5 ;
+      camera_pos[1] += period * leftward.v[1] * 0.5 ;
+      camera_pos[2] += period * leftward.v[2] * 0.5 ;
+    }
+    if(GLFW_PRESS == glfwGetKey (window, GLFW_KEY_D)){
+      vec4 r = {.v={1.0,0.0,0.0,0.0}};
+      vec4 rightward = matapp4(rotate4v(camera_ori),r);
+      camera_pos[0] += period * rightward.v[0] * 0.5 ;
+      camera_pos[1] += period * rightward.v[1] * 0.5 ;
+      camera_pos[2] += period * rightward.v[2] * 0.5 ;
+    }
+
     
     
     glBindVertexArray (vao_circ);
@@ -254,7 +351,9 @@ int main () {
       // link shaders
       shaders[0] = vs; shaders[1]=fs;
       shader_programme = linkShaders(shaders,2);
-      uniform_mat_location = glGetUniformLocation(shader_programme,"translate_mat");
+      model_mat_location = glGetUniformLocation(shader_programme,"model_mat");    
+      view_mat_location = glGetUniformLocation(shader_programme,"view_mat");      
+      project_mat_location = glGetUniformLocation(shader_programme,"project_mat");
     }
     
   }

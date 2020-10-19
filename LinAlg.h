@@ -8,6 +8,7 @@
 // we use pass-by value for simplicity (which enables nested function application).
 #include<stdio.h>
 #include<stdlib.h>
+#include<math.h>
 #ifndef _LIN_ALG_
 #define _LIN_ALG_
 
@@ -28,6 +29,21 @@ typedef struct mat3{
   float m[9];
 } mat3;
 
+mat4 rotate4(float wx, float wy, float wz){
+  float cx = cos(wx) , cy = cos(wy) , cz = cos(wz);
+  float sx = sin(wx) , sy = sin(wy) , sz = sin(wz);
+  mat4 ans = {cz*cy, cz*sy*sx - sz*cx , cz*sy*cx + sz*sx , 0.0,
+	      sz*cy, sz*sy*sx + cz*cx , sz*sy*cx - cz*sx , 0.0,
+	      -sy  , cy*sx            , cy*cx            , 0.0,
+	      0.0  , 0.0              , 0.0              , 1.0
+  };
+  return ans;
+}
+
+
+mat4 rotate4v(float* orientation){
+  return rotate4(orientation[0],orientation[1],orientation[2]);
+}
 
 
 
@@ -36,6 +52,27 @@ mat4 translate4(float dx, float dy, float dz){
 		       0.0 , 1.0 , 0.0 , dy ,
 		       0.0 , 0.0 , 1.0 , dz ,
 		       0.0 , 0.0 , 0.0 , 1.0  }
+  };
+  return ans;
+}
+
+mat4 translate4v(float* pos){
+  return translate4(pos[0],pos[1],pos[2]);
+}
+
+
+mat4 project4(float fov, float aspect, float near, float far ){
+  float range = tan(fov * 0.5) * near;
+  float Sx = (2 * near) / (range * aspect + range * aspect);
+  float Sy = near / range;
+  float Sz = -(far + near) / (far - near);
+  float Pz = -(2 * far * near) / (far - near);
+
+  mat4 ans = {.m = {Sx , 0.0,  0.0, 0.0,
+		    0.0,  Sy,  0.0, 0.0,
+		    0.0, 0.0,   Sz,  Pz,
+		    0.0, 0.0, -1.0, 0.0
+		    }
   };
   return ans;
 }
@@ -72,4 +109,7 @@ void fshowvec4(FILE* file, vec4 v){
   for(short i=0;i<4;i++)
     fprintf(file,"\t%3f\n",v.v[i]);
 }
+
+
+
 #endif
