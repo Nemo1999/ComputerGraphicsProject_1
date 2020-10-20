@@ -8,7 +8,7 @@ LDLIBS=-lGLEW -lglfw -lGL -lm
 all: Guide
 	./Guide
 
-Guide: shader.vert shader.frag Guide.c LinAlg.h
+Guide: ball.vert ball.frag box.vert box.frag Guide.c LinAlg.h
 	gcc Guide.c ${LDLIBS} -o Guide
 
 clean:

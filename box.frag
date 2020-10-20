@@ -5,7 +5,7 @@ in vec2 box_text_eye;
 uniform mat4 view_mat;
 uniform sampler2D box_texture;
 // fixed point light properties
-vec3 light_position_world = vec3 (0.0, 0.0, 4.0);
+vec3 light_position_world = vec3 (2.0, 2.0, 4.0);
 vec3 Ls = vec3 (1.0, 1.0, 1.0); // white specular colour
 vec3 Ld = vec3 (0.7, 0.7, 0.7); // dull white diffuse light colour
 vec3 La = vec3 (0.2, 0.2, 0.2); // grey ambient colour

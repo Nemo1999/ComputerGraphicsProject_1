@@ -77,7 +77,7 @@ mat4 translate4v(float* pos){
 
 mat4 project4(float fov, float aspect, float near, float far ){
   float range = tan(fov * 0.5) * near;
-  float Sx = (2 * near) / (range * aspect + range * aspect);
+  float Sx = near / (range * aspect);
   float Sy = near / range;
   float Sz = -(far + near) / (far - near);
   float Pz = -(2 * far * near) / (far - near);

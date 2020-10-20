@@ -12,8 +12,9 @@
 #include "stb_image.h"
 
 #define GL_LOG_FILE "gl.log"
-#define PI 3.1416f
+#define PI 3.14159265f
 #define CIRC_RES 30
+#define BALL_RES 30
 
 
 bool gl_log (const char* message, ...);
@@ -29,7 +30,7 @@ bool is_valid (GLuint programme);
 GLuint loadShader(char* filename,GLenum shaderType);
 GLuint linkShaders(GLuint* shaders , unsigned short num);
 void _update_fps_counter (GLFWwindow* window);
-
+void loadtexture(char* filename, unsigned short index);
 
 // reported window size may be good to know for a few things
 int g_win_width = 640;
@@ -41,7 +42,13 @@ int g_fb_height = 480;
 float aspect_ratio = 640.0/480.0;
 
 float camera_ori[3] = {0.0f,0.0f,0.0f};  
-float prev_camera_ori[3] = {0.0f,0.0f,0.0f};  
+float prev_camera_ori[3] = {0.0f,0.0f,0.0f};
+
+bool show_box=true;
+bool show_earth=true;
+bool show_moon=true;
+int last_shown=1;
+
 double previous_seconds;
 int frame_count;
 double mouse_x_before_press;
@@ -91,6 +98,23 @@ static void cursor_position_callback(GLFWwindow* window, double xpos, double ypo
   }
 }
 
+void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
+{
+  if (key == GLFW_KEY_1 && action == GLFW_PRESS){
+    show_box = !show_box;
+    if(show_box)last_shown = 1;
+  }
+  if (key == GLFW_KEY_2 && action == GLFW_PRESS){
+    show_earth = !show_earth;
+    if(show_earth)last_shown = 2;
+  }
+  if (key == GLFW_KEY_3 && action == GLFW_PRESS){
+    show_moon = !show_moon;
+    if(show_moon)last_shown = 3;
+  }
+  
+        
+}
 
 int main () {
   
@@ -127,6 +151,7 @@ int main () {
   glfwSetFramebufferSizeCallback (window, glfw_framebuffer_resize_callback);
   glfwSetMouseButtonCallback(window, mouse_button_callback);
   glfwSetCursorPosCallback(window, cursor_position_callback);
+  glfwSetKeyCallback(window, key_callback);
   
   glfwMakeContextCurrent (window);
   // start GLEW extension handler
@@ -143,8 +168,46 @@ int main () {
   glEnable (GL_DEPTH_TEST); // enable depth-testing
   glDepthFunc (GL_LESS); // depth-testing interprets a smaller value as "closer"
 
+  loadtexture("Resources/container.jpg",0);
+  loadtexture("Resources/earth.jpg",1);
+  loadtexture("Resources/moon.jpg",2);
 
   
+  GLfloat ball_vert[(BALL_RES+1)*(BALL_RES+1)*3];
+  for(int i=0;i<BALL_RES+1;i++){
+    for(int j =0;j<BALL_RES+1;j++){
+      float latitude = (PI/(float)BALL_RES)*i - (float)PI/2.0;
+      float longtitude = (2*PI/(float)BALL_RES)*j;
+      ball_vert[(i*(BALL_RES+1)+j)*3] = cos(latitude)*cos(longtitude);
+      ball_vert[(i*(BALL_RES+1)+j)*3+1] = cos(latitude)*sin(longtitude);
+      ball_vert[(i*(BALL_RES+1)+j)*3+2] = sin(latitude);
+    }
+  }
+
+  for(int i=0;i<BALL_RES*BALL_RES;i++)
+    printf("%f\t%f\t%f\n",
+	   ball_vert[i*3],
+	   ball_vert[i*3+1],
+	   ball_vert[i*3+2]);
+  
+  GLfloat ball_text[(BALL_RES+1)*(BALL_RES+1)*2];
+  for(int i=0;i<BALL_RES+1;i++){
+    for(int j =0;j<BALL_RES+1;j++){
+      float res = 1.0/(float)BALL_RES;
+      ball_text[(i*(BALL_RES+1)+j)*2] = res*j;
+      ball_text[(i*(BALL_RES+1)+j)*2+1] = res*i;
+      
+    }
+  }
+
+  GLuint ball_indices[(BALL_RES+1)*(2*BALL_RES)];
+    for(int i=0;i<BALL_RES;i++){
+      for(int j=0;j<BALL_RES+1;j++){
+	ball_indices[i*(BALL_RES+1)*2+j*2]   =i*(BALL_RES+1) + j;
+	ball_indices[i*(BALL_RES+1)*2+j*2+1] =(i+1)*(BALL_RES+1) + j;
+      }
+    }
+    
   GLfloat box_vert[36*3];
   for(int fix_cord=0;fix_cord<3;fix_cord++){ // fix x y or z coord
     for(int fix = 0; fix<2;fix++){// fix cord 1 or -1
@@ -184,12 +247,12 @@ int main () {
       }
     }
   }
-  for(int i=0;i<36;i++){
+  /* for(int i=0;i<36;i++){
     printf("%f,%f,%f\n",
 	   box_normal[3*i],
 	   box_normal[3*i+1],
 	   box_normal[3*i+2]);
-  }
+	   }*/
 
   GLfloat box_text[36*2];
   for(int fix_cord=0;fix_cord<3;fix_cord++){ // fix x y or z coord
@@ -198,18 +261,17 @@ int main () {
       for(short i=0;i<6;i++){// points in a square
 	short square_2D[6][2]={
 			       {1,1},
-			       {1,-1},
-			       {-1,1},
-			       {-1,-1},
-			       {-1,1},
-			       {1,-1}
+			       {1,0},
+			       {0,1},
+			       {0,0},
+			       {0,1},
+			       {1,0}
 	};
 	box_square[i*2] = square_2D[i][0];
 	box_square[i*2+1] = square_2D[i][1];
       }
     }
   }
-
 
   
   GLfloat points_col [(CIRC_RES+1)*3];
@@ -280,37 +342,36 @@ int main () {
 
   
   
-  GLuint vbo_circ = 0;
-  glGenBuffers (1,&vbo_circ);
-  glBindBuffer(GL_ARRAY_BUFFER,vbo_circ);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(points_circ),points_circ,GL_STATIC_DRAW);
+  GLuint vbo_ball_vert = 0;
+  glGenBuffers (1,&vbo_ball_vert);
+  glBindBuffer(GL_ARRAY_BUFFER,vbo_ball_vert);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(ball_vert),ball_vert,GL_STATIC_DRAW);
 
-  GLuint vbo_col = 0;
-  glGenBuffers (1,&vbo_col);
-  glBindBuffer(GL_ARRAY_BUFFER,vbo_col);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(points_col),points_col,GL_STATIC_DRAW);
+  GLuint vbo_ball_text = 0;
+  glGenBuffers (1,&vbo_ball_text);
+  glBindBuffer(GL_ARRAY_BUFFER,vbo_ball_text);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(ball_text),ball_text,GL_STATIC_DRAW);
 
-  GLuint vbo_ind = 0;
-  glGenBuffers (1,&vbo_ind);
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,vbo_ind);
-  glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices_circ),indices_circ,GL_STATIC_DRAW);
+  GLuint vbo_ball_ind = 0;
+  glGenBuffers (1,&vbo_ball_ind);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,vbo_ball_ind);
+  glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(ball_indices),ball_indices,GL_STATIC_DRAW);
   
-  GLuint vao_circ = 0;
-  glGenVertexArrays (1, &vao_circ);
-  glBindVertexArray (vao_circ);
+  GLuint vao_ball = 0;
+  glGenVertexArrays (1, &vao_ball);
+  glBindVertexArray (vao_ball);
 
   glEnableVertexAttribArray (0);//set layout (location = 0) in vertex shader 
-  glBindBuffer (GL_ARRAY_BUFFER, vbo_circ);
+  glBindBuffer (GL_ARRAY_BUFFER, vbo_ball_vert);
   glVertexAttribPointer (0, 3, GL_FLOAT, GL_FALSE, 0, NULL);
   
   glEnableVertexAttribArray (1);//set layout (location = 1) in vertex shader 
-  glBindBuffer (GL_ARRAY_BUFFER, vbo_col);
-  glVertexAttribPointer (1, 3, GL_FLOAT, GL_FALSE, 0, NULL);
+  glBindBuffer (GL_ARRAY_BUFFER, vbo_ball_text);
+  glVertexAttribPointer (1, 2, GL_FLOAT, GL_FALSE, 0, NULL);
   
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo_ind);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo_ball_ind);
   //the following line is not needed for indexed buffer
   //glVertexAttribPointer (0, 1, GL_UNSIGNED_SHORT, GL_FALSE, 0, NULL);
-
   //unbind the VAO
   glBindVertexArray(0);
   //unbind buffers to check that VAO work fine
@@ -318,17 +379,17 @@ int main () {
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,0);
 
   // open vertex shader
-  GLuint vs = loadShader("shader.vert",GL_VERTEX_SHADER);
+  GLuint ball_vs = loadShader("ball.vert",GL_VERTEX_SHADER);
   // open fragment shader
-  GLuint fs = loadShader("shader.frag",GL_FRAGMENT_SHADER);
+  GLuint ball_fs = loadShader("ball.frag",GL_FRAGMENT_SHADER);
   // link shaders
-  GLuint shaders[2] = {vs,fs};
-
-  GLuint shader_programme = linkShaders(shaders,2);
+  GLuint ball_shaders[2] = {ball_vs,ball_fs};
+  GLuint ball_shader_programme = linkShaders(ball_shaders,2);
   
-  int model_mat_location = glGetUniformLocation(shader_programme,"model_mat");
-  int view_mat_location = glGetUniformLocation(shader_programme,"view_mat");
-  int project_mat_location = glGetUniformLocation(shader_programme,"project_mat");
+  int ball_model_mat_location = glGetUniformLocation(ball_shader_programme,"model_mat");
+  int ball_view_mat_location = glGetUniformLocation(ball_shader_programme,"view_mat");
+  int ball_project_mat_location = glGetUniformLocation(ball_shader_programme,"project_mat");
+  int ball_tex_loc = glGetUniformLocation (ball_shader_programme, "ball_texture");
   
   // open vertex shader
   GLuint box_vs = loadShader("box.vert",GL_VERTEX_SHADER);
@@ -341,19 +402,23 @@ int main () {
   int box_model_mat_location = glGetUniformLocation(box_shader_programme,"model_mat");
   int box_view_mat_location = glGetUniformLocation(box_shader_programme,"view_mat");
   int box_project_mat_location = glGetUniformLocation(box_shader_programme,"project_mat");
- 
+  int box_tex_loc = glGetUniformLocation (box_shader_programme, "box_texture");
   
   float field_of_view = 67.0f;
   float near_plane_z = 0.1;
   float far_plane_z = 100;
-    
-  float circ_pos[3] = {0.0f,0.0f,0.0f};
-  float circ_ori[3] = {0.0f,0.0f,0.0f};
+
+  float earth_pos[3] = {0.0f,0.0f,0.0f};
+  float moon_pos[3] = {-2.0f,0.0f,0.0f};
+  float earth_ori[3] = {0.0f,0.0f,0.0f};
+  float moon_ori[3] = {0.0f,0.0f,0.0f};
   float camera_pos[3] = {0.0f , 0.0f , 2.0f };
   // camera_ori is moved to global;
-  float box_pos[3] = {0.9f,0.0f,0.0f};
+  float box_pos[3] = {2.0f,0.0f,0.0f};
+  float box_ori[3] = {0.0f,0.0f,0.0f};
   double time0 = glfwGetTime();
   double time1 , period;
+  float * poses[4] = {0,box_pos,earth_pos,moon_pos};
   
   glClearColor(0.6f,0.6f,0.8f,1.0f);
   while (!glfwWindowShouldClose (window)) {
@@ -361,8 +426,11 @@ int main () {
     time1 = glfwGetTime();
     period = time1-time0;
     time0 = time1;
-    circ_ori[2] = time1;
-    circ_ori[1] = time1;
+    
+    earth_ori[2] = time1*0.3;
+    moon_ori[2] =  time1 * 0.6;
+    box_ori[1] = time1 * 0.2;
+    box_ori[0] = time1 * 0.3;
 
     // wipe the drawing surface clear
     glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -379,27 +447,49 @@ int main () {
 			       )
 		      ).m;
     float* proj_mat = project4(field_of_view,aspect_ratio,near_plane_z,far_plane_z).m;
-
-    glUseProgram (shader_programme);
-    glUniformMatrix4fv(model_mat_location ,1, GL_TRUE, (matmult4(translate4v(circ_pos),rotate4v(circ_ori))).m);
-    glUniformMatrix4fv(view_mat_location,1,GL_TRUE,view_mat);		     
-    glUniformMatrix4fv(project_mat_location,1,GL_TRUE,proj_mat);
-    //print_all(shader_programme);
-    glBindVertexArray (vao_circ);
-    // draw points 0-3 from the currently bound VAO with current in-use shader
-    glDrawElements (GL_TRIANGLE_STRIP, (CIRC_RES+1)*2,GL_UNSIGNED_SHORT,NULL);
-
-    glUseProgram (box_shader_programme);
-    float * box_model_mat=(matmult4(
-				    translate4v(box_pos),
-				    matmult4(rotate4v(circ_ori),scale4(0.5)))).m;
-    glUniformMatrix4fv(box_model_mat_location ,1, GL_TRUE,box_model_mat );
-    glUniformMatrix4fv(box_view_mat_location,1,GL_TRUE,view_mat);		     
-    glUniformMatrix4fv(box_project_mat_location,1,GL_TRUE,proj_mat);
-    //print_all(shader_programme);
-    glBindVertexArray (vao_box);
-    glDrawArrays(GL_TRIANGLES,0,36);
-    
+    if(show_earth){
+      glUseProgram (ball_shader_programme);
+      float * earth_model_mat=(matmult4(
+				       translate4v(earth_pos),
+				       matmult4(rotate4(-1.5,0.2,0.0),rotate4v(earth_ori)))).m;
+      glUniformMatrix4fv(ball_model_mat_location ,1, GL_TRUE,earth_model_mat);
+      glUniformMatrix4fv(ball_view_mat_location,1,GL_TRUE,view_mat);		     
+      glUniformMatrix4fv(ball_project_mat_location,1,GL_TRUE,proj_mat);
+      glUniform1i (ball_tex_loc, 1);
+      //print_all(shader_programme);
+      glBindVertexArray (vao_ball);
+      // draw points 0-3 from the currently bound VAO with current in-use shader
+      glDrawElements (GL_TRIANGLE_STRIP, (BALL_RES+1)*2*(BALL_RES-1),GL_UNSIGNED_INT,NULL);
+      //box shader begin
+    }
+    if(show_moon){
+      glUseProgram (ball_shader_programme);
+      float * moon_model_mat=(matmult4(
+				       translate4v(moon_pos),
+				       matmult4(rotate4(-1.5,0.2,0.0),rotate4v(moon_ori)))).m;
+      glUniformMatrix4fv(ball_model_mat_location ,1, GL_TRUE,moon_model_mat);
+      glUniformMatrix4fv(ball_view_mat_location,1,GL_TRUE,view_mat);		     
+      glUniformMatrix4fv(ball_project_mat_location,1,GL_TRUE,proj_mat);
+      glUniform1i (ball_tex_loc, 2);
+      //print_all(shader_programme);
+      glBindVertexArray (vao_ball);
+      // draw points 0-3 from the currently bound VAO with current in-use shader
+      glDrawElements (GL_TRIANGLE_STRIP, (BALL_RES+1)*2*(BALL_RES-1),GL_UNSIGNED_INT,NULL);
+      //box shader begin
+    }
+    if(show_box){
+      glUseProgram (box_shader_programme);
+      float * box_model_mat=(matmult4(
+				      translate4v(box_pos),
+				      matmult4(rotate4v(box_ori),scale4(0.5)))).m;
+      glUniformMatrix4fv(box_model_mat_location ,1, GL_TRUE,box_model_mat );
+      glUniformMatrix4fv(box_view_mat_location,1,GL_TRUE,view_mat);		     
+      glUniformMatrix4fv(box_project_mat_location,1,GL_TRUE,proj_mat);
+      glUniform1i (box_tex_loc, 0);
+      //print_all(shader_programme);
+      glBindVertexArray (vao_box);
+      glDrawArrays(GL_TRIANGLES,0,36);
+    }
     
     // update other events like input handling
     glfwPollEvents ();
@@ -407,17 +497,24 @@ int main () {
     glfwSwapBuffers (window);
 
     if(GLFW_PRESS == glfwGetKey (window, GLFW_KEY_UP)){
-      circ_pos[1]-= period * 0.3 ;
+      poses[last_shown][1]-= period   ;
     }
     if(GLFW_PRESS == glfwGetKey (window, GLFW_KEY_DOWN)){
-      circ_pos[1]+= period * 0.3 ;
+      poses[last_shown][1]+= period  ;
     }
     if(GLFW_PRESS == glfwGetKey (window, GLFW_KEY_RIGHT)){
-      circ_pos[0]-= period * 0.3 ;
+      poses[last_shown][0]-= period  ;
     }
     if(GLFW_PRESS == glfwGetKey (window, GLFW_KEY_LEFT)){
-      circ_pos[0]+= period * 0.3 ;
+      poses[last_shown][0]+= period  ;
     }
+    if(GLFW_PRESS == glfwGetKey (window, GLFW_KEY_F)){
+      poses[last_shown][2]-= period  ;
+    }
+    if(GLFW_PRESS == glfwGetKey (window, GLFW_KEY_B)){
+      poses[last_shown][2]+= period  ;
+    }
+  
   
 
     if(GLFW_PRESS == glfwGetKey (window, GLFW_KEY_W)){
@@ -449,20 +546,34 @@ int main () {
       camera_pos[2] += period * rightward.v[2] * 0.5 ;
     }
 
+
     if (GLFW_PRESS == glfwGetKey (window, GLFW_KEY_ESCAPE)) {
       glfwSetWindowShouldClose (window, 1);
     }
     
     if (GLFW_PRESS == glfwGetKey (window, GLFW_KEY_R)) {
-      vs = loadShader("shader.vert",GL_VERTEX_SHADER);
+      ball_vs = loadShader("ball.vert",GL_VERTEX_SHADER);
       // open fragment shader
-      fs = loadShader("shader.frag",GL_FRAGMENT_SHADER);
+      ball_fs = loadShader("ball.frag",GL_FRAGMENT_SHADER);
       // link shaders
-      shaders[0] = vs; shaders[1]=fs;
-      shader_programme = linkShaders(shaders,2);
-      model_mat_location = glGetUniformLocation(shader_programme,"model_mat");    
-      view_mat_location = glGetUniformLocation(shader_programme,"view_mat");      
-      project_mat_location = glGetUniformLocation(shader_programme,"project_mat");
+      ball_shaders[0] = ball_vs; ball_shaders[1]=ball_fs;
+      ball_shader_programme = linkShaders(ball_shaders,2);
+      ball_model_mat_location = glGetUniformLocation(ball_shader_programme,"model_mat");    
+      ball_view_mat_location = glGetUniformLocation(ball_shader_programme,"view_mat");      
+      ball_project_mat_location = glGetUniformLocation(ball_shader_programme,"project_mat");
+      ball_tex_loc = glGetUniformLocation (ball_shader_programme, "ball_texture");
+
+      box_vs = loadShader("box.vert",GL_VERTEX_SHADER);
+      // open fragment shader
+      box_fs = loadShader("box.frag",GL_FRAGMENT_SHADER);
+      // link shaders
+      box_shaders[0] = box_vs; box_shaders[1]=box_fs;
+      box_shader_programme = linkShaders(box_shaders,2);
+      box_model_mat_location = glGetUniformLocation(box_shader_programme,"model_mat");    
+      box_view_mat_location = glGetUniformLocation(box_shader_programme,"view_mat");      
+      box_project_mat_location = glGetUniformLocation(box_shader_programme,"project_mat");
+      box_tex_loc = glGetUniformLocation (box_shader_programme, "box_texture");
+      
     }
     
   }
@@ -737,4 +848,37 @@ GLuint linkShaders(GLuint* shaders , unsigned short num){
   //validate shaders
   if(is_valid(shader_programme)) return shader_programme;  
 
+}
+void loadtexture(char* filename, unsigned short tex_index){
+   //load texture images
+  int x, y, n;
+  int force_channels = 4;
+  unsigned char* img = stbi_load (filename, &x, &y, &n, force_channels);
+  if (!img) {
+    fprintf (stderr, "ERROR: could not load %s\n",filename);
+  }
+  // NPOT check
+  if ((x & (x - 1)) != 0 || (y & (y - 1)) != 0) {
+    fprintf (stderr, "WARNING: texture %s is not power-of-2 dimensions\n", filename);
+  }
+  GLuint tex = 0;
+  glGenTextures (1, &tex);
+  glActiveTexture (GL_TEXTURE0+tex_index);
+  glBindTexture (GL_TEXTURE_2D, tex);
+  glTexImage2D (
+		GL_TEXTURE_2D,
+		0,
+		GL_RGBA,
+		x,
+		y,
+		0,
+		GL_RGBA,
+		GL_UNSIGNED_BYTE,
+		img
+		);
+  glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+  glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+  glTexParameterf (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  glTexParameterf (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  return;
 }
