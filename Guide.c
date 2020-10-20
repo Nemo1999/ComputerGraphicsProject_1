@@ -147,7 +147,7 @@ int main () {
   
   GLfloat box_vert[36*3];
   for(int fix_cord=0;fix_cord<3;fix_cord++){ // fix x y or z coord
-    for(int fix = 0; fix>2;fix++){// fix cord 1 or -1
+    for(int fix = 0; fix<2;fix++){// fix cord 1 or -1
       GLfloat* box_square = &(box_vert[fix_cord*12*3+fix*6*3]);
       for(short i=0;i<6;i++){// points in a square
 	short square_2D[6][2]={
@@ -172,11 +172,13 @@ int main () {
       }
     }
   }
-
+  /*for(int i=0;i<36;i++){
+    printf("%f,%f,%f\n",box_vert[3*i],box_vert[3*i+1],box_vert[3*i+2]);
+    }*/
   GLfloat box_normal[36*3];
   for(int fix_cord=0;fix_cord<3;fix_cord++){ // fix x y or z coord
     for(int fix = 0; fix>2;fix++){// fix cord 1 or -1
-      GLfloat* box_square = &(box_vert[fix_cord*12*3+fix*6*3]);
+      GLfloat* box_square = &(box_normal[fix_cord*12*3+fix*6*3]);
       for(short i=0;i<6;i++){// points in a square
 	for(short j=0;j<3;j++){
 	  box_square[i*3+j] = (j==fix_cord)? (float)(fix?1:-1): (float)0;
@@ -186,7 +188,25 @@ int main () {
   }
 
   GLfloat box_text[36*2];
-  //todo
+  for(int fix_cord=0;fix_cord<3;fix_cord++){ // fix x y or z coord
+    for(int fix = 0; fix>2;fix++){// fix cord 1 or -1
+      GLfloat* box_square = &(box_text[fix_cord*12*2+fix*6*2]);
+      for(short i=0;i<6;i++){// points in a square
+	short square_2D[6][2]={
+			       {1,1},
+			       {1,-1},
+			       {-1,1},
+			       {-1,-1},
+			       {-1,1},
+			       {1,-1}
+	};
+	box_square[i*2] = square_2D[i][0];
+	box_square[i*2+1] = square_2D[i][1];
+      }
+    }
+  }
+
+
   
   GLfloat points_col [(CIRC_RES+1)*3];
   // points on  the circle has index 0 ~ CIRC_RES-1 
@@ -218,29 +238,59 @@ int main () {
     indices_circ[2*i+1] = (i==CIRC_RES) ? 0 : i ;
   }
   
+  GLuint vbo_box_vert = 0;
+  glGenBuffers (1,&vbo_box_vert);
+  glBindBuffer(GL_ARRAY_BUFFER,vbo_box_vert);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(box_vert),box_vert,GL_STATIC_DRAW);
 
+  GLuint vbo_box_normal = 0;
+  glGenBuffers (1,&vbo_box_normal);
+  glBindBuffer(GL_ARRAY_BUFFER,vbo_box_normal);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(box_normal),box_normal,GL_STATIC_DRAW);
 
-  GLuint vbo_col = 0;
-  glGenBuffers (1,&vbo_col);
-  glBindBuffer(GL_ARRAY_BUFFER,vbo_col);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(points_col),points_col,GL_STATIC_DRAW);
+  GLuint vbo_box_text = 0;
+  glGenBuffers (1,&vbo_box_text);
+  glBindBuffer(GL_ARRAY_BUFFER,vbo_box_text);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(box_text),box_text,GL_STATIC_DRAW);
+
+  GLuint vao_box = 0;
+  glGenVertexArrays (1, &vao_box);
+  glBindVertexArray (vao_box);
+
+  glEnableVertexAttribArray (0);//set layout (location = 0) in vertex shader 
+  glBindBuffer (GL_ARRAY_BUFFER, vbo_box_vert);
+  glVertexAttribPointer (0, 3, GL_FLOAT, GL_FALSE, 0, NULL);
+  
+  glEnableVertexAttribArray (1);//set layout (location = 1) in vertex shader 
+  glBindBuffer (GL_ARRAY_BUFFER, vbo_box_normal);
+  glVertexAttribPointer (1, 3, GL_FLOAT, GL_FALSE, 0, NULL);
+
+  glEnableVertexAttribArray (2);//set layout (location = 2) in vertex shader 
+  glBindBuffer (GL_ARRAY_BUFFER, vbo_box_text);
+  glVertexAttribPointer (1, 2, GL_FLOAT, GL_FALSE, 0, NULL);
+  
+  //unbind the VAO
+  glBindVertexArray(0);
+  //unbind buffers to check that VAO work fine
+  glBindBuffer(GL_ARRAY_BUFFER,0);
+
+  
   
   GLuint vbo_circ = 0;
   glGenBuffers (1,&vbo_circ);
   glBindBuffer(GL_ARRAY_BUFFER,vbo_circ);
   glBufferData(GL_ARRAY_BUFFER, sizeof(points_circ),points_circ,GL_STATIC_DRAW);
 
+  GLuint vbo_col = 0;
+  glGenBuffers (1,&vbo_col);
+  glBindBuffer(GL_ARRAY_BUFFER,vbo_col);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(points_col),points_col,GL_STATIC_DRAW);
+
   GLuint vbo_ind = 0;
   glGenBuffers (1,&vbo_ind);
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,vbo_ind);
   glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices_circ),indices_circ,GL_STATIC_DRAW);
-  /* GLuint vao = 0; */
-  /* glGenVertexArrays (1, &vao); */
-  /* glBindVertexArray (vao); */
-  /* glEnableVertexAttribArray (0); */
-  /* glBindBuffer (GL_ARRAY_BUFFER, vbo); */
-  /* glVertexAttribPointer (0, 3, GL_FLOAT, GL_FALSE, 0, NULL); */
-
+  
   GLuint vao_circ = 0;
   glGenVertexArrays (1, &vao_circ);
   glBindVertexArray (vao_circ);
@@ -271,14 +321,24 @@ int main () {
   GLuint shaders[2] = {vs,fs};
 
   GLuint shader_programme = linkShaders(shaders,2);
-
-  //glUseProgram (shader_programme);
-  // get the unique location of the variable called " inputColour "
+  
   int model_mat_location = glGetUniformLocation(shader_programme,"model_mat");
   int view_mat_location = glGetUniformLocation(shader_programme,"view_mat");
   int project_mat_location = glGetUniformLocation(shader_programme,"project_mat");
-  //printf("uniform location = %d",uniform_location);
+  
+  // open vertex shader
+  GLuint box_vs = loadShader("box.vert",GL_VERTEX_SHADER);
+  // open fragment shader
+  GLuint box_fs = loadShader("box.frag",GL_FRAGMENT_SHADER);
+  // link shaders
+  GLuint box_shaders[2] = {box_vs,box_fs};
+  GLuint box_shader_programme = linkShaders(box_shaders,2);
 
+  int box_model_mat_location = glGetUniformLocation(box_shader_programme,"model_mat");
+  int box_view_mat_location = glGetUniformLocation(box_shader_programme,"view_mat");
+  int box_project_mat_location = glGetUniformLocation(box_shader_programme,"project_mat");
+ 
+  
   float field_of_view = 67.0f;
   float near_plane_z = 0.1;
   float far_plane_z = 100;
@@ -287,7 +347,7 @@ int main () {
   float circ_ori[3] = {0.0f,0.0f,0.0f};
   float camera_pos[3] = {0.0f , 0.0f , 2.0f };
   // camera_ori is moved to global;
-  
+  float box_pos[3] = {0.9f,0.0f,0.0f};
   double time0 = glfwGetTime();
   double time1 , period;
   
@@ -297,36 +357,51 @@ int main () {
     time1 = glfwGetTime();
     period = time1-time0;
     time0 = time1;
+    circ_ori[2] = time1;
+    circ_ori[1] = time1;
+
     // wipe the drawing surface clear
     glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glViewport (0, 0, g_fb_width, g_fb_height);
+    float* view_mat = (matmult4(
+			       rotate4(
+				       -camera_ori[0],
+				       -camera_ori[1],
+				       -camera_ori[2]),
+			       translate4(
+					  -camera_pos[0],
+					  -camera_pos[1],
+					  -camera_pos[2])
+			       )
+		      ).m;
+    float* proj_mat = project4(field_of_view,aspect_ratio,near_plane_z,far_plane_z).m;
+
     glUseProgram (shader_programme);
     glUniformMatrix4fv(model_mat_location ,1, GL_TRUE, (matmult4(translate4v(circ_pos),rotate4v(circ_ori))).m);
-    glUniformMatrix4fv(view_mat_location,
-		       1,
-		       GL_TRUE,
-		       (matmult4(
-				 rotate4(
-					 -camera_ori[0],
-					 -camera_ori[1],
-					 -camera_ori[2]),
-				 translate4(
-					    -camera_pos[0],
-					    -camera_pos[1],
-					    -camera_pos[2])
-				 )
-			).m
-		       );
-							     
-    glUniformMatrix4fv(project_mat_location,1,GL_TRUE,project4(field_of_view,aspect_ratio,near_plane_z,far_plane_z).m);
-    
-    //gluLookAt(x,y,z+0.5,0,0,0,0,1,0);
+    glUniformMatrix4fv(view_mat_location,1,GL_TRUE,view_mat);		     
+    glUniformMatrix4fv(project_mat_location,1,GL_TRUE,proj_mat);
     //print_all(shader_programme);
+    glBindVertexArray (vao_circ);
+    // draw points 0-3 from the currently bound VAO with current in-use shader
+    glDrawElements (GL_TRIANGLE_STRIP, (CIRC_RES+1)*2,GL_UNSIGNED_SHORT,NULL);
 
-
-    circ_ori[2] = time1;
-    circ_ori[1] = time1;
+    glUseProgram (box_shader_programme);
+    float * box_model_mat=(matmult4(
+				    translate4v(box_pos),
+				    matmult4(rotate4v(circ_ori),scale4(0.5)))).m;
+    glUniformMatrix4fv(box_model_mat_location ,1, GL_TRUE,box_model_mat );
+    glUniformMatrix4fv(box_view_mat_location,1,GL_TRUE,view_mat);		     
+    glUniformMatrix4fv(box_project_mat_location,1,GL_TRUE,proj_mat);
+    //print_all(shader_programme);
+    glBindVertexArray (vao_box);
+    glDrawArrays(GL_TRIANGLES,0,36);
     
+    
+    // update other events like input handling
+    glfwPollEvents ();
+    // put the stuff we've been drawing onto the display
+    glfwSwapBuffers (window);
+
     if(GLFW_PRESS == glfwGetKey (window, GLFW_KEY_UP)){
       circ_pos[1]+= period * 0.3 ;
     }
@@ -334,17 +409,12 @@ int main () {
       circ_pos[1]-= period * 0.3 ;
     }
     if(GLFW_PRESS == glfwGetKey (window, GLFW_KEY_RIGHT)){
-      circ_pos[0]+= period * 0.3 ;
-    }
-    if(GLFW_PRESS == glfwGetKey (window, GLFW_KEY_LEFT)){
       circ_pos[0]-= period * 0.3 ;
     }
-    if(GLFW_PRESS == glfwGetKey (window, GLFW_KEY_N)){
-      circ_pos[1]+= period * 0.3 ;
+    if(GLFW_PRESS == glfwGetKey (window, GLFW_KEY_LEFT)){
+      circ_pos[0]+= period * 0.3 ;
     }
-    if(GLFW_PRESS == glfwGetKey (window, GLFW_KEY_F)){
-      circ_pos[1]-= period * 0.3 ;
-    }
+  
 
     if(GLFW_PRESS == glfwGetKey (window, GLFW_KEY_W)){
       vec4 f = {.v={0.0,0.0,-1.0,0.0}};
@@ -361,29 +431,19 @@ int main () {
       camera_pos[2] += period * backward.v[2] * 0.5 ;
     }
     if(GLFW_PRESS == glfwGetKey (window, GLFW_KEY_A)){
-      vec4 l = {.v={-1.0,0.0,0.0,0.0}};
+      vec4 l = {.v={1.0,0.0,0.0,0.0}};
       vec4 leftward = matapp4(rotate4v(camera_ori),l);
       camera_pos[0] += period * leftward.v[0] * 0.5 ;
       camera_pos[1] += period * leftward.v[1] * 0.5 ;
       camera_pos[2] += period * leftward.v[2] * 0.5 ;
     }
     if(GLFW_PRESS == glfwGetKey (window, GLFW_KEY_D)){
-      vec4 r = {.v={1.0,0.0,0.0,0.0}};
+      vec4 r = {.v={-1.0,0.0,0.0,0.0}};
       vec4 rightward = matapp4(rotate4v(camera_ori),r);
       camera_pos[0] += period * rightward.v[0] * 0.5 ;
       camera_pos[1] += period * rightward.v[1] * 0.5 ;
       camera_pos[2] += period * rightward.v[2] * 0.5 ;
     }
-
-    
-    
-    glBindVertexArray (vao_circ);
-    // draw points 0-3 from the currently bound VAO with current in-use shader
-    glDrawElements (GL_TRIANGLE_STRIP, (CIRC_RES+1)*2,GL_UNSIGNED_SHORT,NULL);
-    // update other events like input handling
-    glfwPollEvents ();
-    // put the stuff we've been drawing onto the display
-    glfwSwapBuffers (window);
 
     if (GLFW_PRESS == glfwGetKey (window, GLFW_KEY_ESCAPE)) {
       glfwSetWindowShouldClose (window, 1);

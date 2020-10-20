@@ -35,6 +35,14 @@ vec3 negate3v(float* in){
 }
 
 
+mat4 scale4(float scale){
+  mat4 ans = {.m={scale,0.0,0.0,0.0,
+		  0.0,scale,0.0,0.0,
+		  0.0,0.0,scale,0.0,
+		  0.0,0.0,0.0,1.0}};
+  return ans;
+}
+
 mat4 rotate4(float wx, float wy, float wz){
   float cx = cos(wx) , cy = cos(wy) , cz = cos(wz);
   float sx = sin(wx) , sy = sin(wy) , sz = sin(wz);
