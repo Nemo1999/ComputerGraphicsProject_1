@@ -24,7 +24,10 @@ glxinfo | grep OpenGL
 # OpenGL version string: 4.6 (Compatibility Profile) Mesa 20.0.8
 # OpenGL shading language version string: 4.60
 ```
-
+### Build The Project
+```bash
+make all
+```
 
 
 
