@@ -10,6 +10,7 @@ out vec2 box_text_eye;
 uniform mat4 model_mat;
 uniform mat4 view_mat;
 uniform mat4 project_mat;
+
 void main () {
   box_pos_eye = vec3(view_mat * model_mat * vec4(box_vert, 1.0)) ;
   // note that if we do any scaling in model_mate,
