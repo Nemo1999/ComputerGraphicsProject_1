@@ -172,12 +172,10 @@ int main () {
       }
     }
   }
-  /*for(int i=0;i<36;i++){
-    printf("%f,%f,%f\n",box_vert[3*i],box_vert[3*i+1],box_vert[3*i+2]);
-    }*/
+  
   GLfloat box_normal[36*3];
   for(int fix_cord=0;fix_cord<3;fix_cord++){ // fix x y or z coord
-    for(int fix = 0; fix>2;fix++){// fix cord 1 or -1
+    for(int fix = 0; fix<2;fix++){// fix cord 1 or -1
       GLfloat* box_square = &(box_normal[fix_cord*12*3+fix*6*3]);
       for(short i=0;i<6;i++){// points in a square
 	for(short j=0;j<3;j++){
@@ -186,10 +184,16 @@ int main () {
       }
     }
   }
+  for(int i=0;i<36;i++){
+    printf("%f,%f,%f\n",
+	   box_normal[3*i],
+	   box_normal[3*i+1],
+	   box_normal[3*i+2]);
+  }
 
   GLfloat box_text[36*2];
   for(int fix_cord=0;fix_cord<3;fix_cord++){ // fix x y or z coord
-    for(int fix = 0; fix>2;fix++){// fix cord 1 or -1
+    for(int fix = 0; fix<2;fix++){// fix cord 1 or -1
       GLfloat* box_square = &(box_text[fix_cord*12*2+fix*6*2]);
       for(short i=0;i<6;i++){// points in a square
 	short square_2D[6][2]={
@@ -267,7 +271,7 @@ int main () {
 
   glEnableVertexAttribArray (2);//set layout (location = 2) in vertex shader 
   glBindBuffer (GL_ARRAY_BUFFER, vbo_box_text);
-  glVertexAttribPointer (1, 2, GL_FLOAT, GL_FALSE, 0, NULL);
+  glVertexAttribPointer (2, 2, GL_FLOAT, GL_FALSE, 0, NULL);
   
   //unbind the VAO
   glBindVertexArray(0);
@@ -403,10 +407,10 @@ int main () {
     glfwSwapBuffers (window);
 
     if(GLFW_PRESS == glfwGetKey (window, GLFW_KEY_UP)){
-      circ_pos[1]+= period * 0.3 ;
+      circ_pos[1]-= period * 0.3 ;
     }
     if(GLFW_PRESS == glfwGetKey (window, GLFW_KEY_DOWN)){
-      circ_pos[1]-= period * 0.3 ;
+      circ_pos[1]+= period * 0.3 ;
     }
     if(GLFW_PRESS == glfwGetKey (window, GLFW_KEY_RIGHT)){
       circ_pos[0]-= period * 0.3 ;
