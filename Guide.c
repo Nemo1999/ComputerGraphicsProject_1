@@ -8,6 +8,8 @@
 #include <stdarg.h>
 #include <stdbool.h>
 #include "LinAlg.h"
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
 
 #define GL_LOG_FILE "gl.log"
 #define PI 3.1416f
@@ -140,9 +142,51 @@ int main () {
   // tell GL to only draw onto a pixel if the shape is closer to the viewer
   glEnable (GL_DEPTH_TEST); // enable depth-testing
   glDepthFunc (GL_LESS); // depth-testing interprets a smaller value as "closer"
-  /* OTHER STUFF GOES HERE NEXT */
 
 
+  
+  GLfloat box_vert[36*3];
+  for(int fix_cord=0;fix_cord<3;fix_cord++){ // fix x y or z coord
+    for(int fix = 0; fix>2;fix++){// fix cord 1 or -1
+      GLfloat* box_square = &(box_vert[fix_cord*12*3+fix*6*3]);
+      for(short i=0;i<6;i++){// points in a square
+	short square_2D[6][2]={
+			       {1,1},
+			       {1,-1},
+			       {-1,1},
+			       {-1,-1},
+			       {-1,1},
+			       {1,-1}
+	};
+	short pass_fix = 0;
+	for(short j=0;j<3;j++){//xyz channel
+	  if(j==fix_cord){
+	    box_square[i*3+fix_cord] =(float)fix?1:-1;
+	    pass_fix = 1;
+	  }
+	  else{
+	    box_square[i*3+j] = (float) square_2D[i][j - pass_fix];
+	  }
+	  
+	}
+      }
+    }
+  }
+
+  GLfloat box_normal[36*3];
+  for(int fix_cord=0;fix_cord<3;fix_cord++){ // fix x y or z coord
+    for(int fix = 0; fix>2;fix++){// fix cord 1 or -1
+      GLfloat* box_square = &(box_vert[fix_cord*12*3+fix*6*3]);
+      for(short i=0;i<6;i++){// points in a square
+	for(short j=0;j<3;j++){
+	  box_square[i*3+j] = (j==fix_cord)? (float)(fix?1:-1): (float)0;
+	}
+      }
+    }
+  }
+
+  GLfloat box_text[36*2];
+  //todo
   
   GLfloat points_col [(CIRC_RES+1)*3];
   // points on  the circle has index 0 ~ CIRC_RES-1 
@@ -155,7 +199,7 @@ int main () {
   points_col[CIRC_RES*3] = 0.5f;
   points_col[CIRC_RES*3+1] = 0.5f;
   points_col[CIRC_RES*3+2] = 0.5f;
- 
+  
   GLfloat points_circ[(CIRC_RES+1)*3];
   // points on  the circle has index 0 ~ CIRC_RES-1 
   for(int i=0;i<CIRC_RES;i++){
@@ -281,6 +325,7 @@ int main () {
 
 
     circ_ori[2] = time1;
+    circ_ori[1] = time1;
     
     if(GLFW_PRESS == glfwGetKey (window, GLFW_KEY_UP)){
       circ_pos[1]+= period * 0.3 ;

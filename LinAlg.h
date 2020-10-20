@@ -29,6 +29,12 @@ typedef struct mat3{
   float m[9];
 } mat3;
 
+vec3 negate3v(float* in){
+  vec3 ans = {.v={-in[0],-in[1],-in[2]}};
+  return ans;
+}
+
+
 mat4 rotate4(float wx, float wy, float wz){
   float cx = cos(wx) , cy = cos(wy) , cz = cos(wz);
   float sx = sin(wx) , sy = sin(wy) , sz = sin(wz);
