@@ -13,7 +13,7 @@ sudo apt-get install build-essential libgl1-mesa-dev
 # install build tool and drivers
 
 sudo apt-get install libglew-dev libglfw3-dev
-# install GLFW
+# install GLFW and GLEW
 
 ```
 
