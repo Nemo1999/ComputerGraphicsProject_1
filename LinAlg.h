@@ -9,6 +9,7 @@
 #include<stdio.h>
 #include<stdlib.h>
 #include<math.h>
+#define PI 3.14159265358979
 #ifndef _LIN_ALG_
 #define _LIN_ALG_
 
@@ -76,14 +77,14 @@ mat4 translate4v(float* pos){
 
 
 mat4 project4(float fov, float aspect, float near, float far ){
-  float range = tan(fov * 0.5) * near;
+  float range = tan((fov/(float)180)*PI * 0.5) * near;
   float Sx = near / (range * aspect);
-  float Sy = near / range;
+  float Sy = near / range ;
   float Sz = -(far + near) / (far - near);
   float Pz = -(2 * far * near) / (far - near);
 
-  mat4 ans = {.m = {Sx , 0.0,  0.0, 0.0,
-		    0.0,  Sy,  0.0, 0.0,
+  mat4 ans = {.m = {-Sx , 0.0,  0.0, 0.0,
+		    0.0,  -Sy,  0.0, 0.0,
 		    0.0, 0.0,   Sz,  Pz,
 		    0.0, 0.0, -1.0, 0.0
 		    }

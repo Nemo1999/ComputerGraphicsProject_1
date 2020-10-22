@@ -390,6 +390,7 @@ int main () {
   int ball_view_mat_location = glGetUniformLocation(ball_shader_programme,"view_mat");
   int ball_project_mat_location = glGetUniformLocation(ball_shader_programme,"project_mat");
   int ball_tex_loc = glGetUniformLocation (ball_shader_programme, "ball_texture");
+  int ball_view_ori_mat_location = glGetUniformLocation(ball_shader_programme,"view_ori_mat");
   
   // open vertex shader
   GLuint box_vs = loadShader("box.vert",GL_VERTEX_SHADER);
@@ -447,6 +448,7 @@ int main () {
 			       )
 		      ).m;
     float* proj_mat = project4(field_of_view,aspect_ratio,near_plane_z,far_plane_z).m;
+    float* view_ori_mat = (rotate4(-camera_ori[0],-camera_ori[1],-camera_ori[2])).m;
     if(show_earth){
       glUseProgram (ball_shader_programme);
       float * earth_model_mat=(matmult4(
@@ -455,6 +457,7 @@ int main () {
       glUniformMatrix4fv(ball_model_mat_location ,1, GL_TRUE,earth_model_mat);
       glUniformMatrix4fv(ball_view_mat_location,1,GL_TRUE,view_mat);		     
       glUniformMatrix4fv(ball_project_mat_location,1,GL_TRUE,proj_mat);
+      glUniformMatrix4fv(ball_view_ori_mat_location,1,GL_TRUE,view_ori_mat);
       glUniform1i (ball_tex_loc, 1);
       //print_all(shader_programme);
       glBindVertexArray (vao_ball);
@@ -514,7 +517,12 @@ int main () {
     if(GLFW_PRESS == glfwGetKey (window, GLFW_KEY_B)){
       poses[last_shown][2]+= period  ;
     }
-  
+    if(GLFW_PRESS == glfwGetKey (window, GLFW_KEY_PAGE_UP)){
+      field_of_view -= period * 20;
+    }
+    if(GLFW_PRESS == glfwGetKey (window, GLFW_KEY_PAGE_DOWN)){
+      field_of_view += period * 20 ;
+    }
   
 
     if(GLFW_PRESS == glfwGetKey (window, GLFW_KEY_W)){
