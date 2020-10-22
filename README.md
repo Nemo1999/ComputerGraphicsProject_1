@@ -13,7 +13,7 @@ sudo apt-get install build-essential libgl1-mesa-dev
 # install build tool and drivers
 
 sudo apt-get install libglew-dev libglfw3-dev
-# install GLFW
+# install GLFW and GLEW
 
 ```
 
@@ -24,7 +24,10 @@ glxinfo | grep OpenGL
 # OpenGL version string: 4.6 (Compatibility Profile) Mesa 20.0.8
 # OpenGL shading language version string: 4.60
 ```
-
+### Build The Project
+```bash
+make all
+```
 
 
 
